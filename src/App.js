@@ -1,38 +1,67 @@
-import logo from "./logo.svg";
 import "./App.css";
-
+import axios from "axios";
 import React, { useState } from "react";
 
+const baseURL =
+  "https://my-app-dev-2df40-default-rtdb.firebaseio.com//button.json";
+
 function App() {
-  const [startButtonFlag, setStartButtonFlag] = useState(
-    JSON.parse(localStorage.getItem("is-open")) || false
-  );
+  const [apiStatus, setApiStatus] = useState(null);
+  const [startButtonFlag, setStartButtonFlag] = useState(true);
+
+  // get api status
+  const getApiStatus = () => {
+    axios.get(`${baseURL}`).then((response) => {
+      const items = Object.values(response.data);
+      const result = items[0].flag;
+      setApiStatus(result);
+    });
+  };
+
+  // create new record
+  const createApi = (flag) => {
+    axios
+      .post(baseURL, {
+        flag,
+      })
+      .then((response) => {
+        setApiStatus(response.data);
+        getApiStatus();
+      });
+  };
+
+  // delete existing record
+  const deleteApi = (flag) => {
+    axios.delete(`${baseURL}`).then(() => {
+      createApi(flag);
+    });
+  };
 
   const startTimer = () => {
-    localStorage.setItem("is-open", JSON.stringify(!startButtonFlag));
     setStartButtonFlag(!startButtonFlag);
+    deleteApi(!startButtonFlag);
   };
 
   React.useEffect(() => {
     const interval = setInterval(() => {
-      if (JSON.parse(localStorage.getItem("is-open")) === false) {
+      getApiStatus();
+      if (apiStatus != null && apiStatus === false) {
         setStartButtonFlag(false);
       } else {
         setStartButtonFlag(true);
       }
-      //console.log("This will run every second!");
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [apiStatus]);
 
   return (
     <div className="App">
       <header className="App-header">
         <button className="button" onClick={startTimer}>
-          {startButtonFlag === true ? "Start Event" : "Stop Event"}
+          {apiStatus === true ? "Start Event" : "Stop Event"}
         </button>
         <hr />
-        {!startButtonFlag && <span>🟢🟢🟢🟢🟢</span>}
+        {!apiStatus && <span>🟢🟢🟢🟢🟢</span>}
       </header>
     </div>
   );
